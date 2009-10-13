@@ -32,6 +32,7 @@
 		start/1,
 		start_link/0,
 		start_link/1,
+		stop/1,
 		create/4,
 		update/3,
 		update/4
@@ -52,16 +53,19 @@
 % public API
 
 start() ->
-	gen_server:start(?MODULE, ["/usr/bin/rrdtool"], []).
+	gen_server:start(?MODULE, [os:find_executable("rrdtool")], []).
 
 start(RRDTool) when is_list(RRDTool) ->
 	gen_server:start(?MODULE, [RRDTool], []).
 
 start_link() ->
-	gen_server:start_link(?MODULE, ["/usr/bin/rrdtool"], []).
+	gen_server:start_link(?MODULE, [os:find_executable("rrdtool")], []).
 
 start_link(RRDTool) when is_list(RRDTool) ->
 	gen_server:start_link(?MODULE, [RRDTool], []).
+
+stop(Pid) ->
+	gen_server:call(Pid, stop).
 
 create(Pid, Filename, Datastores, RRAs) ->
 	gen_server:call(Pid, {create, Filename, format_datastores(Datastores), format_archives(RRAs)}, infinity).
@@ -82,7 +86,7 @@ init([RRDTool]) ->
 %% @hidden
 handle_call({create, Filename, Datastores, RRAs}, _From, Port) ->
 	Command = "create " ++ Filename ++ " " ++ string:join(Datastores, " ") ++ " " ++ string:join(RRAs, " ") ++ "\n",
-	io:format("Command: ~p~n", [lists:flatten(Command)]),
+	%io:format("Command: ~p~n", [lists:flatten(Command)]),
 	port_command(Port, Command),
 	receive
 		{Port, {data, {eol, "OK"++_}}} ->
@@ -100,7 +104,7 @@ handle_call({update, Filename, {Datastores, Values}, Time}, _From, Port) ->
 			Other
 	end,
 	Command = ["update ", Filename, " -t ", string:join(Datastores, ":"), " ", Timestamp, ":", string:join(Values, ":"), "\n"],
-	io:format("Command: ~p~n", [lists:flatten(Command)]),
+	%io:format("Command: ~p~n", [lists:flatten(Command)]),
 	port_command(Port, Command),
 	receive
 		{Port, {data, {eol, "OK"++_}}} ->
@@ -108,6 +112,8 @@ handle_call({update, Filename, {Datastores, Values}, Time}, _From, Port) ->
 		{Port, {data, {eol, "ERROR:"++Message}}} ->
 			{reply, {error, Message}, Port}
 	end;
+handle_call(stop, _From, State) ->
+	{stop, normal, ok, State};
 handle_call(Request, _From, State) ->
 	{reply, {unknown_call, Request}, State}.
 
@@ -121,7 +127,8 @@ handle_info(Info, State) ->
 	{noreply, State}.
 
 %% @hidden
-terminate(_Reason, _State) ->
+terminate(_Reason, Port) ->
+	port_command(Port, "quit\n"),
 	ok.
 
 %% @hidden
