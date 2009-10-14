@@ -33,7 +33,7 @@
 		start_link/0,
 		start_link/1,
 		stop/1,
-		create/4,
+		create/5,
 		update/3,
 		update/4
 ]).
@@ -67,8 +67,8 @@ start_link(RRDTool) when is_list(RRDTool) ->
 stop(Pid) ->
 	gen_server:call(Pid, stop).
 
-create(Pid, Filename, Datastores, RRAs) ->
-	gen_server:call(Pid, {create, Filename, format_datastores(Datastores), format_archives(RRAs)}, infinity).
+create(Pid, Filename, Datastores, RRAs, Options) ->
+	gen_server:call(Pid, {create, Filename, format_datastores(Datastores), format_archives(RRAs), format_create_options(Options)}, infinity).
 
 update(Pid, Filename, DatastoreValues) ->
 	gen_server:call(Pid, {update, Filename, format_datastore_values(DatastoreValues), n}, infinity).
@@ -84,8 +84,8 @@ init([RRDTool]) ->
 	{ok, Port}.
 
 %% @hidden
-handle_call({create, Filename, Datastores, RRAs}, _From, Port) ->
-	Command = "create " ++ Filename ++ " " ++ string:join(Datastores, " ") ++ " " ++ string:join(RRAs, " ") ++ "\n",
+handle_call({create, Filename, Datastores, RRAs, Options}, _From, Port) ->
+	Command = ["create ", Options, Filename, " ", string:join(Datastores, " "), " ", string:join(RRAs, " "), "\n"],
 	%io:format("Command: ~p~n", [lists:flatten(Command)]),
 	port_command(Port, Command),
 	receive
@@ -215,3 +215,20 @@ value_to_list(Value) when is_float(Value) ->
 	float_to_list(Value);
 value_to_list(Value) when is_binary(Value) ->
 	binary_to_list(Value).
+
+format_create_options(Options) ->
+	StepOpt = case proplists:get_value(step, Options) of
+		undefined ->
+			[];
+		Step when is_integer(Step) ->
+			["-s ", integer_to_list(Step), " "]
+	end,
+
+	StartOpt = case proplists:get_value(start, Options) of
+		undefined ->
+			[];
+		Start ->
+			["-b ", value_to_list(Start), " "]
+	end,
+
+	lists:flatten([StepOpt, StartOpt]).
