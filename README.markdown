@@ -29,4 +29,4 @@ Rebar
 To use rrdtool in your projects, add a dependency to your rebar.config:
 
     {deps, [{rrdtool, ".*",
-             {git, "git@github.com:afternoon/erlang-rrdtool.git"", "master"}}]}.
+             {git, "git://github.com/afternoon/erlang-rrdtool.git"", "master"}}]}.
