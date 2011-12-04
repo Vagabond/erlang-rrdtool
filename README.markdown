@@ -4,6 +4,8 @@ About
 Erlang-rrdtool is a simple module to allow rrdtool to be treated like an erlang
 port via its 'remote control' mode (`rrdtool -`).
 
+You should probably use https://github.com/archaelus/errd instead.
+
 Usage
 =====
 
