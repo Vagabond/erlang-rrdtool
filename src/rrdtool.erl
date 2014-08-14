@@ -33,6 +33,7 @@
 		start_link/0,
 		start_link/1,
 		stop/1,
+		create/4,
 		create/5,
 		update/3,
 		update/4
@@ -69,6 +70,8 @@ stop(Pid) ->
 
 create(Pid, Filename, Datastores, RRAs, Options) ->
 	gen_server:call(Pid, {create, Filename, format_datastores(Datastores), format_archives(RRAs), format_create_options(Options)}, infinity).
+create(Pid, Filename, Datastores, RRAs) ->
+	gen_server:call(Pid, {create, Filename, format_datastores(Datastores), format_archives(RRAs)}, infinity).
 
 update(Pid, Filename, DatastoreValues) ->
 	gen_server:call(Pid, {update, Filename, format_datastore_values(DatastoreValues), n}, infinity).
